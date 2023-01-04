@@ -6,6 +6,7 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::env;
 use std::fmt;
+use std::time::SystemTime;
 use std::{
     error::Error,
     fs::File,
@@ -26,42 +27,73 @@ impl Error for Errrr {}
 pub fn run() -> Result<(), Box<dyn Error>> {
     let term = Term::stdout();
     term.clear_screen()?;
-    line_loop(&term)?;
+    CodeLine::new(get_random_line().unwrap())
+        .play(&term)
+        .print_result(&term);
     Ok(())
 }
 
-fn character_loop(term: &Term, c: char) -> Result<(), Box<dyn Error>> {
-    loop {
-        let input = term.read_key()?;
-        if input == Key::Escape {
-            return Err(Box::new(Errrr("Oops".into())));
-        } else if input == Key::Char(c) {
-            term.show_cursor()?;
-            term.write_str(&format!("{}", style(c).green().bold()))?;
-            break;
-        } else {
-            term.hide_cursor()?;
-            term.write_str(&format!("{}", style(c).red().bold()))?;
-            term.move_cursor_left(1)?;
+struct CodeLine {
+    line: String,
+    start_time: Option<SystemTime>,
+    seconds: f32,
+    ok: f32,
+    failed: f32,
+}
+
+impl CodeLine {
+    fn new(line: String) -> Self {
+        CodeLine {
+            line,
+            start_time: None,
+            seconds: 0f32,
+            ok: 0f32,
+            failed: 0f32,
         }
     }
-    Ok(())
-}
 
-fn line_loop(term: &Term) -> Result<(), Box<dyn Error>> {
-    'outer: loop {
-        let line = get_random_line()?;
-        term.write_str(&line)?;
-        let characters: Vec<char> = line.chars().collect();
-        term.move_cursor_left(characters.len())?;
+    fn print_result(self, term: &Term) {
+        let acc = ((self.ok / (self.ok + self.failed)) * 100f32).round();
+        let cps = ((self.ok / self.seconds) * 100f32).round() / 100f32;
+        term.write_line(&format!(
+            "    {}{} {}{}",
+            style(acc).yellow(),
+            style("% accuracy").yellow(),
+            style(cps).yellow(),
+            style(" chars per second").yellow(),
+        ))
+        .unwrap();
+    }
+
+    fn play(mut self, term: &Term) -> Self {
+        term.write_str(&self.line).unwrap();
+        self.start_time = Some(SystemTime::now());
+        let characters: Vec<char> = self.line.chars().collect();
+        term.move_cursor_left(characters.len()).unwrap();
         for c in characters {
-            if let Err(_) = character_loop(&term, c) {
-                break 'outer;
+            loop {
+                let input = term.read_key().unwrap();
+                if input == Key::Escape {
+                    self.seconds = self.start_time.unwrap().elapsed().unwrap().as_secs_f32();
+                    return self;
+                } else if input == Key::Char(c) {
+                    self.ok += 1f32;
+                    term.show_cursor().unwrap();
+                    term.write_str(&format!("{}", style(c).green().bold()))
+                        .unwrap();
+                    break;
+                } else {
+                    self.failed += 1f32;
+                    term.hide_cursor().unwrap();
+                    term.write_str(&format!("{}", style(c).red().bold()))
+                        .unwrap();
+                    term.move_cursor_left(1).unwrap();
+                }
             }
         }
-        term.write_line("")?;
+        self.seconds = self.start_time.unwrap().elapsed().unwrap().as_secs_f32();
+        self
     }
-    Ok(())
 }
 
 fn get_random_file_path() -> Result<String, Box<dyn Error>> {

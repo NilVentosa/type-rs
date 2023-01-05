@@ -53,13 +53,15 @@ impl CodeLine {
     }
 
     fn get_result_string(&self) -> String {
-        let acc = if (self.ok / (self.ok + self.failed)).is_nan() {
-            0f32
-        } else {
-            ((self.ok / (self.ok + self.failed)) * 100f32).round()
-        };
-        let cps = ((self.ok / self.seconds) * 1000f32).round() / 1000f32;
-        return format!("{}% acc {} cps", acc, cps);
+        format!(
+            "{}% acc {} cps",
+            if (self.ok / (self.ok + self.failed)).is_nan() {
+                0f32
+            } else {
+                ((self.ok / (self.ok + self.failed)) * 100f32).round()
+            },
+            ((self.ok / self.seconds) * 1000f32).round() / 1000f32
+        )
     }
 
     fn print_result(&self, term: &Term) {

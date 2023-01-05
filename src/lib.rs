@@ -14,8 +14,10 @@ use std::{
 
 pub fn run() -> Result<(), Box<dyn Error>> {
     let term = Term::stdout();
-    term.clear_screen()?;
-    term.write_line(&format!("{}", style("***press esc key to exit").color256(8)))?;
+    term.write_line(&format!(
+        "{}",
+        style("***press esc key to exit").color256(8)
+    ))?;
     let mut code_lines: Vec<CodeLine> = vec![];
     loop {
         let code_line = CodeLine::new(get_random_line().unwrap()).play(&term);
@@ -25,6 +27,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             break;
         }
     }
+    print_total_results(&code_lines, &term);
     Ok(())
 }
 
@@ -49,17 +52,19 @@ impl CodeLine {
         }
     }
 
+    fn get_result_string(&self) -> String {
+        let acc = if (self.ok / (self.ok + self.failed)).is_nan() {
+            0f32
+        } else {
+            ((self.ok / (self.ok + self.failed)) * 100f32).round()
+        };
+        let cps = ((self.ok / self.seconds) * 1000f32).round() / 1000f32;
+        return format!("{}% acc {} cps", acc, cps);
+    }
+
     fn print_result(&self, term: &Term) {
-        let acc = ((self.ok / (self.ok + self.failed)) * 100f32).round();
-        let cps = ((self.ok / self.seconds) * 100f32).round() / 100f32;
-        term.write_line(&format!(
-            "    {}{} {}{}",
-            style(acc).yellow(),
-            style("% acc").yellow(),
-            style(cps).yellow(),
-            style(" cps").yellow(),
-        ))
-        .unwrap();
+        term.write_line(&format!("    {}", style(self.get_result_string()).yellow(),))
+            .unwrap();
     }
 
     fn play(mut self, term: &Term) -> Self {
@@ -72,7 +77,8 @@ impl CodeLine {
                 let input = term.read_key().unwrap();
                 if input == Key::Escape {
                     self.seconds = self.start_time.unwrap().elapsed().unwrap().as_secs_f32();
-                    term.move_cursor_right(self.line.len() - self.ok as usize).unwrap();
+                    term.move_cursor_right(self.line.len() - self.ok as usize)
+                        .unwrap();
                     break 'outer;
                 } else if input == Key::Char(c) {
                     self.ok += 1f32;
@@ -96,6 +102,36 @@ impl CodeLine {
         self.print_result(term);
         self
     }
+}
+
+fn print_total_results(code_lines: &Vec<CodeLine>, term: &Term) {
+    let mut total_time = 0f32;
+    let mut total_ok = 0f32;
+    let mut total_fail = 0f32;
+
+    for code_line in code_lines {
+        total_time += code_line.seconds;
+        total_ok += code_line.ok;
+        total_fail += code_line.failed;
+    }
+
+    term.write_line("").unwrap();
+    term.write_line(&format!(
+        " {}",
+        style(
+            CodeLine {
+                ok: total_ok,
+                failed: total_fail,
+                seconds: total_time,
+                completed: true,
+                start_time: None,
+                line: String::from(""),
+            }
+            .get_result_string()
+        )
+        .yellow()
+    ))
+    .unwrap();
 }
 
 fn get_random_file_path() -> Result<String, Box<dyn Error>> {

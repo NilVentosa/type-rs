@@ -12,4 +12,7 @@ This should be a cli to practice touch typing using lines of rust code. Maybe ev
 - [x] Add instructions
 - [ ] Need to backspace to fix
 - [x] Esc key to stop
+- [ ] Remove all the unwrap()
+- [ ] Add tests
+- [ ] Publish binary crate
 - [ ] ...

@@ -9,6 +9,7 @@ This should be a cli to practice touch typing using lines of rust code. Maybe ev
 - [ ] Choose line or block
 - [ ] Separate the code fetching to a different crate
 - [ ] Add clap
-- [ ] Add instructions
+- [x] Add instructions
 - [ ] Need to backspace to fix
+- [x] Esc key to stop
 - [ ] ...

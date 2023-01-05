@@ -5,7 +5,6 @@ use glob::glob;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::env;
-use std::fmt;
 use std::time::SystemTime;
 use std::{
     error::Error,
@@ -13,23 +12,19 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-#[derive(Debug)]
-struct Errrr(String);
-
-impl fmt::Display for Errrr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "There is an error: {}", self.0)
-    }
-}
-
-impl Error for Errrr {}
-
 pub fn run() -> Result<(), Box<dyn Error>> {
     let term = Term::stdout();
     term.clear_screen()?;
-    CodeLine::new(get_random_line().unwrap())
-        .play(&term)
-        .print_result(&term);
+    term.write_line(&format!("{}", style("***press esc key to exit").color256(8)))?;
+    let mut code_lines: Vec<CodeLine> = vec![];
+    loop {
+        let code_line = CodeLine::new(get_random_line().unwrap()).play(&term);
+        code_lines.push(code_line);
+
+        if code_lines.last().is_some() && !code_lines.last().unwrap().completed {
+            break;
+        }
+    }
     Ok(())
 }
 
@@ -39,6 +34,7 @@ struct CodeLine {
     seconds: f32,
     ok: f32,
     failed: f32,
+    completed: bool,
 }
 
 impl CodeLine {
@@ -49,18 +45,19 @@ impl CodeLine {
             seconds: 0f32,
             ok: 0f32,
             failed: 0f32,
+            completed: false,
         }
     }
 
-    fn print_result(self, term: &Term) {
+    fn print_result(&self, term: &Term) {
         let acc = ((self.ok / (self.ok + self.failed)) * 100f32).round();
         let cps = ((self.ok / self.seconds) * 100f32).round() / 100f32;
         term.write_line(&format!(
             "    {}{} {}{}",
             style(acc).yellow(),
-            style("% accuracy").yellow(),
+            style("% acc").yellow(),
             style(cps).yellow(),
-            style(" chars per second").yellow(),
+            style(" cps").yellow(),
         ))
         .unwrap();
     }
@@ -70,12 +67,13 @@ impl CodeLine {
         self.start_time = Some(SystemTime::now());
         let characters: Vec<char> = self.line.chars().collect();
         term.move_cursor_left(characters.len()).unwrap();
-        for c in characters {
+        'outer: for c in characters {
             loop {
                 let input = term.read_key().unwrap();
                 if input == Key::Escape {
                     self.seconds = self.start_time.unwrap().elapsed().unwrap().as_secs_f32();
-                    return self;
+                    term.move_cursor_right(self.line.len() - self.ok as usize).unwrap();
+                    break 'outer;
                 } else if input == Key::Char(c) {
                     self.ok += 1f32;
                     term.show_cursor().unwrap();
@@ -91,7 +89,11 @@ impl CodeLine {
                 }
             }
         }
+        if self.ok == self.line.len() as f32 {
+            self.completed = true;
+        }
         self.seconds = self.start_time.unwrap().elapsed().unwrap().as_secs_f32();
+        self.print_result(term);
         self
     }
 }

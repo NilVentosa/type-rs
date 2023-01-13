@@ -1,4 +1,4 @@
-use code_lines::{get_random_line, Language::Rust, LineConfig};
+use code_lines::{get_random_line, Language::*, LineConfig};
 use console::style;
 use console::Key;
 use console::Term;
@@ -10,7 +10,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     term.write_line(&format!(
         "{}",
         style("***press esc key to exit").color256(8)
-    ))?;
+    ))
+    .unwrap();
     let mut code_lines: Vec<CodeLine> = vec![];
     loop {
         let code_line =
@@ -94,8 +95,10 @@ impl CodeLine {
         if self.ok == self.line.len() as f32 {
             self.completed = true;
         }
-        self.seconds = self.start_time.unwrap().elapsed().unwrap().as_secs_f32();
-        self.print_result(term);
+        if self.ok > 1f32 {
+            self.seconds = self.start_time.unwrap().elapsed().unwrap().as_secs_f32();
+            self.print_result(term);
+        }
         self
     }
 }
@@ -109,6 +112,10 @@ fn print_total_results(code_lines: &Vec<CodeLine>, term: &Term) {
         total_time += code_line.seconds;
         total_ok += code_line.ok;
         total_fail += code_line.failed;
+    }
+
+    if total_time == 0f32 {
+        term.write_line("").unwrap();
     }
 
     term.write_line("").unwrap();

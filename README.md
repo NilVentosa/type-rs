@@ -13,7 +13,7 @@ cargo run -q
 - [x] Results after each line
 - [x] Results at the end
 - [ ] Choose line or block
-- [ ] Separate the code fetching to a different crate
+- [x] Separate the code fetching to a different crate
 - [ ] Add clap
 - [x] Add instructions
 - [ ] Need to backspace to fix

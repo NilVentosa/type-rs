@@ -1,3 +1,5 @@
+use clap::{Arg, Command};
+use code_lines::Language;
 use code_lines::{get_random_line, Language::*, LineConfig};
 use console::style;
 use console::Key;
@@ -5,7 +7,33 @@ use console::Term;
 use std::error::Error;
 use std::time::SystemTime;
 
+struct Config {
+    language: Language,
+}
+
+fn get_args() -> Result<Config, Box<dyn Error>> {
+    let matches = Command::new("Acro")
+        .author("Nil Ventosa")
+        .version("0.1.0")
+        .about("For practicing typing with code lines")
+        .arg(
+            Arg::new("language")
+                .help("in what language. Defaults to Rust")
+                .required(false),
+        )
+        .get_matches();
+
+
+    let language_argument = matches.get_one::<String>("language");
+    if language_argument.is_some() {
+        let language = Language::from(language_argument.unwrap())?;
+        return Ok(Config { language });
+    }
+    Ok(Config { language: Rust })
+}
+
 pub fn run() -> Result<(), Box<dyn Error>> {
+    let config = get_args()?;
     let term = Term::stdout();
     term.write_line(&format!(
         "{}",
@@ -15,10 +43,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let mut code_lines: Vec<CodeLine> = vec![];
     loop {
         let code_line =
-            CodeLine::new(get_random_line(&LineConfig { language: Rust }).unwrap()).play(&term);
+            CodeLine::new(get_random_line(&LineConfig { language: config.language })?.play(&term);
         code_lines.push(code_line);
 
-        if code_lines.last().is_some() && !code_lines.last().unwrap().completed {
+        if code_lines.last().is_some() && !code_lines.last()?.completed {
             break;
         }
     }

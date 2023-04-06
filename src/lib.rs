@@ -23,7 +23,6 @@ fn get_args() -> Result<Config, Box<dyn Error>> {
         )
         .get_matches();
 
-
     let language_argument = matches.get_one::<String>("language");
     if language_argument.is_some() {
         let language = Language::from(language_argument.unwrap())?;
@@ -42,11 +41,13 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     .unwrap();
     let mut code_lines: Vec<CodeLine> = vec![];
     loop {
-        let code_line =
-            CodeLine::new(get_random_line(&LineConfig { language: config.language })?.play(&term);
+        let code_line = CodeLine::new(get_random_line(&LineConfig {
+            language: config.language,
+        })?)
+        .play(&term);
         code_lines.push(code_line);
 
-        if code_lines.last().is_some() && !code_lines.last()?.completed {
+        if code_lines.last().is_some() && !code_lines.last().unwrap().completed {
             break;
         }
     }
